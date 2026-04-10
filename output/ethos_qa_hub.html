@@ -1198,11 +1198,16 @@
       </div>
     </div>
     <div id="lt_err" style="color:#e53e3e;font-size:.83rem;margin-top:10px;display:none"></div>
-    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+  </div>
+
+  <!-- ACTION BUTTONS (always visible once mode selected) -->
+  <div class="card" style="padding:14px 20px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary" onclick="ltRunAnalysis()" id="lt_run_btn" style="display:none">⚡ Run AI Analysis</button>
       <button class="btn btn-primary" onclick="ltRunManual()" id="lt_manual_btn" style="display:none">☑ Generate Checklist</button>
       <button class="btn btn-secondary" onclick="ltReset()">Reset</button>
     </div>
+    <div id="lt_err" style="color:#e53e3e;font-size:.83rem;margin-top:10px;display:none"></div>
   </div>
 
   <!-- RESULTS -->
