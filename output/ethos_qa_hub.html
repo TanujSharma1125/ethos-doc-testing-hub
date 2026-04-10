@@ -267,6 +267,7 @@
     <button class="tab-btn" onclick="showTab('formsRef',event)">Forms Reference</button>
     <button class="tab-btn" onclick="showTab('scenarios',event)">Scenarios</button>
     <button class="tab-btn" onclick="showTab('mtlog',event)">M&amp;T Log</button>
+    <button class="tab-btn" onclick="showTab('livetest',event)">⚡ Live Test</button>
   </nav>
 </div>
 
@@ -1093,6 +1094,126 @@
     </div>
   </div>
 </div><!-- /mtlog -->
+
+<!-- LIVE TEST TAB -->
+<div id="livetest" class="tab-content">
+  <div class="card">
+    <div class="card-title">⚡ Live Packet Testing</div>
+    <div class="card-subtitle">Upload a document packet PDF and get an instant AI-powered Pass/Fail analysis against the hub's form rules. Requires your Anthropic API key (same key used by the AI Assistant).</div>
+  </div>
+
+  <!-- API KEY WARNING (shown if no key) -->
+  <div id="lt-key-warn" class="alert alert-warning" style="display:none">
+    <span class="alert-icon">⚠</span>
+    <div>No API key found. Open the <strong>AI Assistant</strong> (bottom-right chat button) and enter your Anthropic API key first, then return here.</div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="card">
+    <div class="card-title">Test Configuration</div>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="form-group">
+        <label>Product</label>
+        <select id="lt_product" onchange="ltUpdateProduct()">
+          <option value="lga">LGA Prime</option>
+          <option value="ameritas_iul">Ameritas IUL</option>
+          <option value="sfg_iul">SFG IUL</option>
+          <option value="banner_fegi">Banner GIWL</option>
+          <option value="banner_fesi">Banner SIWL</option>
+          <option value="ameritas_choice">Ameritas Choice</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>State</label>
+        <input type="text" id="lt_state" placeholder="e.g. TX, CA, FL, Compact">
+      </div>
+      <div class="form-group">
+        <label>Channel</label>
+        <select id="lt_channel">
+          <option value="DTC">DTC</option>
+          <option value="AA">AA</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Replacement</label>
+        <select id="lt_replacement">
+          <option value="No">No</option>
+          <option value="Yes">Yes</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Packet Type</label>
+        <select id="lt_packet">
+          <option value="Auth">Auth Packet</option>
+          <option value="App">Application Packet</option>
+          <option value="Policy">Policy Packet</option>
+          <option value="Full">Full / Combined</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Scenario ID <span style="color:#718096;font-weight:400">(optional)</span></label>
+        <input type="text" id="lt_scenario" placeholder="e.g. FESI-03">
+      </div>
+      <div class="form-group">
+        <label>Tester</label>
+        <input type="text" id="lt_tester" placeholder="Your name">
+      </div>
+      <div class="form-group">
+        <label>Policy Number <span style="color:#718096;font-weight:400">(optional)</span></label>
+        <input type="text" id="lt_pol" placeholder="e.g. BL-2026-00412">
+      </div>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="card">
+    <div class="card-title">Upload Packet PDF</div>
+    <div style="margin-top:10px">
+      <label style="display:block;border:2px dashed #d0dcea;border-radius:8px;padding:28px;text-align:center;cursor:pointer;transition:border-color .15s;background:#f8fafc" id="lt_dropzone" ondragover="event.preventDefault();this.style.borderColor='#1a3a5c'" ondragleave="this.style.borderColor='#d0dcea'" ondrop="ltHandleDrop(event)">
+        <input type="file" id="lt_file" accept=".pdf" style="display:none" onchange="ltHandleFile(this.files[0])">
+        <div style="font-size:2rem;margin-bottom:8px">📄</div>
+        <div style="font-weight:600;color:#1a3a5c;font-size:.9rem">Drop PDF here or click to browse</div>
+        <div style="color:#718096;font-size:.78rem;margin-top:4px">Single packet PDF — Auth, App, or Policy</div>
+      </label>
+      <div id="lt_file_name" style="margin-top:8px;font-size:.82rem;color:#2d3748;display:none">
+        <strong>Selected:</strong> <span id="lt_fname"></span>
+        <button onclick="ltClearFile()" style="background:none;border:none;color:#e53e3e;cursor:pointer;font-size:.8rem;margin-left:8px">✕ Remove</button>
+      </div>
+    </div>
+    <div id="lt_err" style="color:#e53e3e;font-size:.83rem;margin-top:10px;display:none"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="ltRunAnalysis()" id="lt_run_btn">⚡ Run Analysis</button>
+      <button class="btn btn-secondary" onclick="ltReset()">Reset</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="lt_results" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div class="card-title" style="margin-bottom:0">Analysis Results</div>
+        <div style="display:flex;gap:10px">
+          <span id="lt_res_pass" style="background:#dcfce7;color:#166534;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:700">✓ Pass: 0</span>
+          <span id="lt_res_fail" style="background:#fee2e2;color:#9f1239;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:700">✗ Fail: 0</span>
+        </div>
+      </div>
+      <div id="lt_result_body" style="font-size:.85rem;line-height:1.7;color:#2d3748"></div>
+    </div>
+    <div class="card" id="lt_log_card" style="display:none">
+      <div class="card-title">Push to M&amp;T Log</div>
+      <div style="font-size:.83rem;color:#555;margin-bottom:12px">Review the suggested entry below, then click Push to add it to the M&amp;T Log.</div>
+      <div id="lt_log_preview" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;font-size:.8rem;font-family:monospace;white-space:pre-wrap;color:#2d3748;margin-bottom:12px"></div>
+      <button class="btn btn-success" onclick="ltPushToLog()">Push to M&amp;T Log</button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="lt_loading" style="display:none;text-align:center;padding:40px">
+    <div style="font-size:1.8rem;margin-bottom:12px">⚡</div>
+    <div style="font-weight:600;color:#1a3a5c;font-size:.95rem">Analyzing packet…</div>
+    <div style="color:#718096;font-size:.8rem;margin-top:4px">Checking forms against hub rules</div>
+  </div>
+</div><!-- /livetest -->
 
 <script>
 // ===== SHARED (carrier-agnostic) FORMS =====
@@ -2356,6 +2477,269 @@ function addAIMsg(cls, text, id) {
 function scrollAI() {
   var msgs = document.getElementById('aiMsgs');
   msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ===== LIVE TEST =====
+var ltFileData = null;
+var ltLastResult = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  var dz = document.getElementById('lt_dropzone');
+  if (dz) dz.addEventListener('click', function() { document.getElementById('lt_file').click(); });
+});
+
+function ltHandleFile(file) {
+  if (!file) return;
+  if (file.type !== 'application/pdf') {
+    document.getElementById('lt_err').textContent = 'Please upload a PDF file.';
+    document.getElementById('lt_err').style.display = 'block';
+    return;
+  }
+  document.getElementById('lt_err').style.display = 'none';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    ltFileData = e.target.result.split(',')[1]; // base64 only
+    document.getElementById('lt_fname').textContent = file.name;
+    document.getElementById('lt_file_name').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function ltHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('lt_dropzone').style.borderColor = '#d0dcea';
+  var file = e.dataTransfer.files[0];
+  if (file) ltHandleFile(file);
+}
+
+function ltClearFile() {
+  ltFileData = null;
+  document.getElementById('lt_file').value = '';
+  document.getElementById('lt_file_name').style.display = 'none';
+  document.getElementById('lt_results').style.display = 'none';
+}
+
+function ltReset() {
+  ltClearFile();
+  ['lt_state','lt_scenario','lt_tester','lt_pol'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['lt_product','lt_channel','lt_replacement','lt_packet'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.selectedIndex = 0;
+  });
+  document.getElementById('lt_err').style.display = 'none';
+}
+
+function ltUpdateProduct() {}
+
+function ltBuildPrompt() {
+  var product = document.getElementById('lt_product').value;
+  var state = document.getElementById('lt_state').value.trim() || 'Compact';
+  var channel = document.getElementById('lt_channel').value;
+  var replacement = document.getElementById('lt_replacement').value;
+  var packetType = document.getElementById('lt_packet').value;
+  var p = PRODUCTS[product];
+  var productName = p ? p.name : product;
+
+  // Build expected forms list for this product+state combo
+  var allForms = (p ? p.forms : []).concat(SHARED_FORMS);
+  var relevantForms = allForms.filter(function(f) {
+    if (f.status === 'Obsolete') return false;
+    var docMatch = packetType === 'Full' || f.doc.indexOf(packetType) !== -1 ||
+      (packetType === 'Auth' && f.doc.indexOf('Auth') !== -1) ||
+      (packetType === 'App' && f.doc.indexOf('App') !== -1) ||
+      (packetType === 'Policy' && f.doc.indexOf('Policy') !== -1);
+    if (!docMatch) return false;
+    var stateMatch = f.state === 'All' ||
+      f.state.split(',').map(function(s){return s.trim();}).some(function(s) {
+        return s === state || s === 'Compact' && state === 'Compact' ||
+          state.toUpperCase() === s.toUpperCase();
+      });
+    return stateMatch;
+  });
+
+  var formList = relevantForms.map(function(f) {
+    return '- ' + f.name + ' (' + f.num + ')' +
+      (f.br ? ' [CONDITIONAL: ' + f.br + ']' : ' [ALWAYS PRESENT]');
+  }).join('\n');
+
+  return 'You are a QA testing assistant for Ethos Technologies insurance documents.\n\n' +
+    'PRODUCT: ' + productName + '\n' +
+    'STATE: ' + state + '\n' +
+    'CHANNEL: ' + channel + '\n' +
+    'REPLACEMENT: ' + replacement + '\n' +
+    'PACKET TYPE: ' + packetType + '\n\n' +
+    'EXPECTED FORMS FOR THIS COMBINATION:\n' + formList + '\n\n' +
+    'INSTRUCTIONS:\n' +
+    '1. Read the uploaded PDF packet carefully\n' +
+    '2. List every form/document you find in the packet with its form number\n' +
+    '3. For each EXPECTED form, check if it is PRESENT or ABSENT in the packet\n' +
+    '4. For conditional forms, check if the condition applies given the test config\n' +
+    '5. Flag any UNEXPECTED forms that should not be in this packet\n' +
+    '6. Return your analysis in this exact format:\n\n' +
+    '## SUMMARY\n' +
+    'Overall: PASS or FAIL\n' +
+    'Pass: X | Fail: X | Warnings: X\n\n' +
+    '## FORM CHECKLIST\n' +
+    '| Result | Form Name | Form Number | Notes |\n' +
+    '|--------|-----------|-------------|-------|\n' +
+    '| ✅ PASS | ... | ... | ... |\n' +
+    '| ❌ FAIL | ... | ... | Missing from packet |\n\n' +
+    '## ISSUES FOUND\n' +
+    '(List any fails, unexpected forms, or field-level concerns)\n\n' +
+    '## M&T LOG ENTRY\n' +
+    'Result: PASS or FAIL\n' +
+    'Notes: (brief summary for the log)\n\n' +
+    'CRITICAL RULE: Field checks are rules, not hardcoded values. Never assert an expected value — verify each field matches the actual funnel response.';
+}
+
+function ltRunAnalysis() {
+  var key = apiKey || getStoredKey();
+  var warnEl = document.getElementById('lt-key-warn');
+  var errEl = document.getElementById('lt_err');
+
+  if (!key) { warnEl.style.display = 'flex'; return; }
+  warnEl.style.display = 'none';
+
+  if (!ltFileData) {
+    errEl.textContent = 'Please upload a PDF packet first.';
+    errEl.style.display = 'block';
+    return;
+  }
+  var state = document.getElementById('lt_state').value.trim();
+  if (!state) {
+    errEl.textContent = 'Please enter the state.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  document.getElementById('lt_results').style.display = 'none';
+  document.getElementById('lt_loading').style.display = 'block';
+  document.getElementById('lt_run_btn').disabled = true;
+
+  var prompt = ltBuildPrompt();
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-allow-browser': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: ltFileData }
+          },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    document.getElementById('lt_loading').style.display = 'none';
+    document.getElementById('lt_run_btn').disabled = false;
+    if (data.error) {
+      errEl.textContent = 'API error: ' + data.error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+    var reply = data.content && data.content[0] ? data.content[0].text : '';
+    ltShowResults(reply);
+  })
+  .catch(function(e) {
+    document.getElementById('lt_loading').style.display = 'none';
+    document.getElementById('lt_run_btn').disabled = false;
+    errEl.textContent = 'Connection error. Check your API key and try again.';
+    errEl.style.display = 'block';
+  });
+}
+
+function ltShowResults(text) {
+  ltLastResult = text;
+  var passCount = (text.match(/✅/g) || []).length;
+  var failCount = (text.match(/❌/g) || []).length;
+
+  document.getElementById('lt_res_pass').textContent = '✓ Pass: ' + passCount;
+  document.getElementById('lt_res_fail').textContent = '✗ Fail: ' + failCount;
+
+  // Render markdown-ish result
+  var html = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^## (.+)$/gm,'<h4 style="color:#1a3a5c;margin:16px 0 6px;font-size:.88rem;text-transform:uppercase;letter-spacing:.04em">$1</h4>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;font-size:.8rem">$1</code>')
+    .replace(/✅/g,'<span style="color:#16a34a">✅</span>')
+    .replace(/❌/g,'<span style="color:#dc2626">❌</span>')
+    .replace(/⚠/g,'<span style="color:#d97706">⚠</span>')
+    .replace(/\n\|(.+)\|\n/g, function(m) {
+      var cells = m.trim().split('|').filter(function(c){return c.trim();});
+      return '<tr>' + cells.map(function(c){return '<td style="padding:5px 10px;border-bottom:1px solid #e2e8f0;font-size:.8rem">'+c.trim()+'</td>';}).join('') + '</tr>';
+    })
+    .replace(/(<tr>.*<\/tr>\n?)+/g, function(m) { return '<table style="width:100%;border-collapse:collapse;margin:8px 0">' + m + '</table>'; })
+    .replace(/\n/g,'<br>');
+
+  document.getElementById('lt_result_body').innerHTML = html;
+
+  // Build M&T log preview
+  var product = document.getElementById('lt_product').value;
+  var p = PRODUCTS[product];
+  var overallMatch = text.match(/Overall:\s*(PASS|FAIL)/i);
+  var overall = overallMatch ? overallMatch[1] : (failCount > 0 ? 'FAIL' : 'PASS');
+  var notesMatch = text.match(/Notes:\s*(.+)/i);
+  var notes = notesMatch ? notesMatch[1].trim() : (failCount + ' issues found');
+  var logEntry = [
+    'Date: ' + new Date().toISOString().slice(0,10),
+    'Product: ' + (p ? p.name : product),
+    'Policy Number: ' + (document.getElementById('lt_pol').value || '—'),
+    'Tester: ' + (document.getElementById('lt_tester').value || '—'),
+    'Scenario: ' + (document.getElementById('lt_scenario').value || '—'),
+    'State: ' + document.getElementById('lt_state').value,
+    'Result: ' + overall,
+    'Notes: ' + notes
+  ].join('\n');
+
+  document.getElementById('lt_log_preview').textContent = logEntry;
+  document.getElementById('lt_log_card').style.display = 'block';
+  document.getElementById('lt_results').style.display = 'block';
+
+  ltLastResult = { overall: overall, notes: notes };
+  window.scrollTo({ top: document.getElementById('lt_results').offsetTop - 80, behavior: 'smooth' });
+}
+
+function ltPushToLog() {
+  if (!ltLastResult) return;
+  var product = document.getElementById('lt_product').value;
+  var p = PRODUCTS[product];
+  var overall = ltLastResult.overall;
+  var entry = {
+    num: logData.length + 1,
+    date: new Date().toISOString().slice(0,10),
+    product: product,
+    productName: p ? p.name : product,
+    pol: document.getElementById('lt_pol').value || '',
+    tester: document.getElementById('lt_tester').value || '',
+    scenario: document.getElementById('lt_scenario').value || '',
+    state: document.getElementById('lt_state').value || '',
+    result: overall,
+    jira: '',
+    insurance: 'Pending',
+    carrier: 'Pending',
+    prod: 'No',
+    notes: ltLastResult.notes || ''
+  };
+  logData.push(entry);
+  updateStats();
+  showTab('mtlog', null);
+  setTimeout(function() { renderLogTable(); }, 100);
 }
 
 // ===== INIT =====
